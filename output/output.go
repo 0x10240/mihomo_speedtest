@@ -32,7 +32,7 @@ func writeResultsToYAML(filePath string, results []result.Result, proxies map[st
 	var sortedProxies []any
 	for _, res := range results {
 		if proxy, exists := proxies[res.Name]; exists {
-			sortedProxies = append(sortedProxies, proxy.SecretConfig)
+			sortedProxies = append(sortedProxies, proxy)
 		}
 	}
 

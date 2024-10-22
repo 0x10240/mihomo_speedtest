@@ -25,7 +25,7 @@ func TestProxies(names []string, proxies map[string]config.CProxy, sizeMB int, t
 		switch proxy.Type() {
 		case C.Shadowsocks, C.ShadowsocksR, C.Snell, C.Socks5, C.Http, C.Vmess, C.Vless, C.Trojan, C.Hysteria, C.Hysteria2, C.WireGuard, C.Tuic:
 			downloadSize := sizeMB * 1024 * 1024
-			res := testProxyConcurrent(name, proxy.Proxy, downloadSize, timeout, concurrent, livenessObject)
+			res := testProxyConcurrent(name, proxy, downloadSize, timeout, concurrent, livenessObject)
 			res.Print()
 			results = append(results, res)
 		default:

@@ -17,11 +17,12 @@ var (
 	livenessObject     = flag.String("l", "https://speed.cloudflare.com/__down?bytes=%d", "URL of the target to test, supports custom size")
 	configPathConfig   = flag.String("c", "", "Configuration file path or URL")
 	filterRegexConfig  = flag.String("f", ".*", "Filter node names using regular expressions")
-	downloadSizeConfig = flag.Int("size", 10, "Download size for testing (in MB)")
+	downloadSizeConfig = flag.Int("size", 100, "Download size for testing (in MB)")
 	timeoutConfig      = flag.Duration("timeout", 5*time.Second, "Timeout duration for testing")
 	sortField          = flag.String("sort", "b", "Sort field: 'b' for bandwidth, 't' for latency")
 	outputFormat       = flag.String("output", "", "Output results to 'csv' or 'yaml' file")
 	concurrent         = flag.Int("concurrent", 4, "Number of concurrent downloads")
+	forwardProxy       = flag.String("proxy", "", "Forward proxy, supporting SOCKS5 and HTTP proxy.")
 )
 
 func main() {
@@ -33,7 +34,7 @@ func main() {
 	}
 
 	// Load all proxies
-	allProxies := config.LoadAllProxies(*configPathConfig)
+	allProxies := config.LoadAllProxies(*configPathConfig, *forwardProxy)
 	if len(allProxies) == 0 {
 		fmt.Fprintln(os.Stderr, "No proxies found, please check the configuration file")
 		os.Exit(1)
