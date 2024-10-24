@@ -24,6 +24,8 @@ var (
 	concurrent         = flag.Int("concurrent", 4, "Number of concurrent downloads")
 	proxy              = flag.String("proxy", "", "proxy to get resource")
 	forwardProxy       = flag.String("forward-proxy", "", "Forward proxy, supporting SOCKS5 and HTTP proxy.")
+	delayTest          = flag.Bool("delay", false, "only delay testing")
+	delayTestUrl       = flag.String("delayurl", "https://www.gstatic.com/generate_204", "delay test url")
 )
 
 func main() {
@@ -49,7 +51,14 @@ func main() {
 	}
 
 	// Test proxies
-	results := tester.TestProxies(filteredProxies, allProxies, *downloadSizeConfig, *timeoutConfig, *concurrent, *livenessObject)
+	var results []result.Result
+	if *delayTest {
+		results = tester.TestProxiesDelay(allProxies, *delayTestUrl, *timeoutConfig)
+		result.DisplayDelayResult(results)
+		return
+	}
+
+	results = tester.TestProxies(filteredProxies, allProxies, *downloadSizeConfig, *timeoutConfig, *concurrent, *livenessObject)
 
 	// Sort results
 	if *sortField != "" {

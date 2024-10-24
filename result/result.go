@@ -12,9 +12,12 @@ import (
 )
 
 type Result struct {
-	Name      string
-	Bandwidth float64
-	TTFB      time.Duration
+	Name       string
+	OutBoundIp string
+	Country    string
+	Bandwidth  float64
+	TTFB       time.Duration
+	Delay      uint16
 }
 
 func (r *Result) Print() {
@@ -65,6 +68,13 @@ func formatMilliseconds(d time.Duration) string {
 	return fmt.Sprintf("%.2fms", float64(d.Milliseconds()))
 }
 
+func formatDelay(d uint16) string {
+	if d == 9999 {
+		return "N/A"
+	}
+	return fmt.Sprintf("%d", d)
+}
+
 func SortResults(results []Result, sortBy string) {
 	switch sortBy {
 	case "b", "bandwidth":
@@ -75,7 +85,30 @@ func SortResults(results []Result, sortBy string) {
 		sort.Slice(results, func(i, j int) bool {
 			return results[i].TTFB < results[j].TTFB
 		})
+	case "d", "delay":
+		sort.Slice(results, func(i, j int) bool {
+			return results[i].Delay < results[j].Delay
+		})
 	}
+}
+
+func DisplayDelayResult(results []Result) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Node", "Delay(ms)", "IP", "Country"})
+
+	SortResults(results, "delay")
+
+	for _, res := range results {
+		data := []string{
+			formatName(res.Name),
+			formatDelay(res.Delay),
+			fmt.Sprintf("%v", res.OutBoundIp),
+			fmt.Sprintf("%v", res.Country),
+		}
+		table.Append(data)
+	}
+
+	table.Render()
 }
 
 func DisplayResults(results []Result, sortedBy string) {
@@ -86,13 +119,15 @@ func DisplayResults(results []Result, sortedBy string) {
 	}
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Node", "Bandwidth", "Latency"})
+	table.SetHeader([]string{"Node", "Bandwidth", "Latency", "IP", "Country"})
 
 	for _, res := range results {
 		data := []string{
 			formatName(res.Name),
 			fmt.Sprintf("%v", formatBandwidth(res.Bandwidth)),
 			fmt.Sprintf("%v", formatMilliseconds(res.TTFB)),
+			fmt.Sprintf("%v", res.OutBoundIp),
+			fmt.Sprintf("%v", res.Country),
 		}
 		table.Append(data)
 	}

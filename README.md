@@ -18,24 +18,31 @@ Features:
 
 # 查看帮助
 > clash-speedtest -h
-Usage of clash-speedtest:
+Usage of ./mihomo-speedtest:
   -c string
-        configuration file path, also support http(s) url
+    	Configuration file path or URL
   -concurrent int
-        download concurrent size (default 4)
+    	Number of concurrent downloads (default 4)
+  -delay
+    	only delay testing
+  -delayurl string
+    	delay test url (default "https://www.gstatic.com/generate_204")
   -f string
-        filter proxies by name, use regexp (default ".*")
-  -output yaml / csv
-        output result to csv / yaml file
-  -size int
-        download size for testing proxies (default 104857600)
-  -sort string
-        sort field for testing proxies, b for bandwidth, t for TTFB (default "b")
-  -timeout duration
-        timeout for testing proxies (default 5s)
+    	Filter node names using regular expressions (default ".*")
+  -forward-proxy string
+    	Forward proxy, supporting SOCKS5 and HTTP proxy.
   -l string
-        liveness object, support http(s) url, support payload too (default "https://speed.cloudflare.com/__down?bytes=%d")
-        
+    	URL of the target to test, supports custom size (default "https://speed.cloudflare.com/__down?bytes=%d")
+  -output string
+    	Output results to 'csv' or 'yaml' file
+  -proxy string
+    	proxy to get resource
+  -size int
+    	Download size for testing (in MB) (default 100)
+  -sort string
+    	Sort field: 'b' for bandwidth, 't' for latency (default "b")
+  -timeout duration
+    	Timeout duration for testing (default 5s)
 
 # 演示：
 # 1. 测试全部节点，使用 HTTP 订阅地址

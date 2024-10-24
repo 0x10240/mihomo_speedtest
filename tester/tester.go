@@ -3,6 +3,7 @@ package tester
 import (
 	"context"
 	"fmt"
+	"github.com/go-resty/resty/v2"
 	"io"
 	"net"
 	"net/http"
@@ -13,8 +14,48 @@ import (
 
 	"github.com/0x10240/mihomo-speedtest/config"
 	"github.com/0x10240/mihomo-speedtest/result"
+	cutils "github.com/metacubex/mihomo/common/utils"
 	C "github.com/metacubex/mihomo/constant"
 )
+
+func TestProxiesDelay(proxies map[string]config.CProxy, delayTestUrl string, timeout time.Duration) []result.Result {
+	results := make([]result.Result, 0, len(proxies))
+	mu := sync.Mutex{} // 用于保护 results 切片的并发写操作
+	expectedStatus, _ := cutils.NewUnsignedRanges[uint16]("200")
+
+	var wg sync.WaitGroup
+	semaphore := make(chan struct{}, 16) // 并发限制为16
+
+	for name, proxy := range proxies {
+		wg.Add(1)
+		// 启动一个 goroutine
+		go func(name string, proxy config.CProxy) {
+			defer wg.Done()
+			semaphore <- struct{}{} // 获取一个令牌，控制并发数
+
+			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			defer cancel()
+
+			delay, err := proxy.URLTest(ctx, delayTestUrl, expectedStatus)
+			if err != nil {
+				delay = 9999
+			}
+			res := result.Result{Name: name, Delay: delay}
+			if delay != 9999 {
+				setProxyOutboundIP(proxy, &res, timeout)
+			}
+			// 使用互斥锁保护 results 的写入
+			mu.Lock()
+			results = append(results, res)
+			mu.Unlock()
+
+			<-semaphore // 释放令牌
+		}(name, proxy)
+	}
+
+	wg.Wait() // 等待所有的 goroutine 完成
+	return results
+}
 
 func TestProxies(names []string, proxies map[string]config.CProxy, sizeMB int, timeout time.Duration, concurrent int, livenessObject string) []result.Result {
 	results := make([]result.Result, 0, len(names))
@@ -33,6 +74,39 @@ func TestProxies(names []string, proxies map[string]config.CProxy, sizeMB int, t
 		}
 	}
 	return results
+}
+
+func getProxyTransport(proxy C.Proxy) *http.Transport {
+	return &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			host, portStr, err := net.SplitHostPort(addr)
+			if err != nil {
+				return nil, err
+			}
+			port, err := strconv.ParseUint(portStr, 10, 16)
+			if err != nil {
+				return nil, err
+			}
+			return proxy.DialContext(ctx, &C.Metadata{
+				Host:    host,
+				DstPort: uint16(port),
+			})
+		},
+	}
+}
+
+func setProxyOutboundIP(proxy C.Proxy, res *result.Result, timeout time.Duration) {
+	client := resty.New()
+	transport := getProxyTransport(proxy)
+	client.SetTimeout(timeout)
+	client.SetTransport(transport)
+	resp, err := client.R().Get("https://speed.cloudflare.com/__down?bytes=1")
+	if err != nil {
+		return
+	}
+	res.OutBoundIp = resp.Header().Get("Cf-Meta-Ip")
+	res.Country = resp.Header().Get("Cf-Meta-Country")
+	//fmt.Printf("%v outbount ip: %v\n", res.Name, res.OutBoundIp)
 }
 
 func testProxyConcurrent(name string, proxy C.Proxy, downloadSize int, timeout time.Duration, concurrentCount int, livenessObject string) result.Result {
@@ -64,32 +138,20 @@ func testProxyConcurrent(name string, proxy C.Proxy, downloadSize int, timeout t
 	avgTTFB := time.Duration(totalTTFB / int64(concurrentCount))
 	bandwidth := float64(downloaded) / downloadTime.Seconds()
 
-	return result.Result{
+	res := result.Result{
 		Name:      name,
 		Bandwidth: bandwidth,
 		TTFB:      avgTTFB,
 	}
+
+	setProxyOutboundIP(proxy, &res, timeout)
+	return res
 }
 
 func testProxy(name string, proxy C.Proxy, downloadSize int, timeout time.Duration, livenessObject string) (result.Result, int64) {
 	client := &http.Client{
-		Timeout: timeout,
-		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-				host, portStr, err := net.SplitHostPort(addr)
-				if err != nil {
-					return nil, err
-				}
-				port, err := strconv.ParseUint(portStr, 10, 16)
-				if err != nil {
-					return nil, err
-				}
-				return proxy.DialContext(ctx, &C.Metadata{
-					Host:    host,
-					DstPort: uint16(port),
-				})
-			},
-		},
+		Timeout:   timeout,
+		Transport: getProxyTransport(proxy),
 	}
 
 	start := time.Now()
