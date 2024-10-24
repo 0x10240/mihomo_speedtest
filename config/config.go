@@ -2,13 +2,12 @@ package config
 
 import (
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/metacubex/mihomo/adapter"
 	"github.com/metacubex/mihomo/adapter/provider"
 	"github.com/metacubex/mihomo/constant"
@@ -23,11 +22,11 @@ type RawConfig struct {
 	Proxies   []map[string]any          `yaml:"proxies"`
 }
 
-func LoadAllProxies(configPaths string, forwardProxy string) map[string]CProxy {
+func LoadAllProxies(configPaths string, proxy string, forwardProxy string) map[string]CProxy {
 	allProxies := make(map[string]CProxy)
 
 	for _, configPath := range strings.Split(configPaths, ",") {
-		body, err := readConfig(configPath)
+		body, err := readConfig(configPath, proxy)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to read config from %s: %v\n", configPath, err)
 			continue
@@ -49,22 +48,30 @@ func LoadAllProxies(configPaths string, forwardProxy string) map[string]CProxy {
 	return allProxies
 }
 
-func readConfig(configPath string) ([]byte, error) {
+func readConfig(configPath string, proxy string) ([]byte, error) {
 	if strings.HasPrefix(configPath, "http") {
-		client := &http.Client{}
-		req, err := http.NewRequest("GET", configPath, nil)
-		if err != nil {
-			return nil, fmt.Errorf("HTTP GET failed: %v", err)
-		}
-		req.Header.Set("User-Agent", "clash.meta")
+		// 创建 Resty 客户端
+		client := resty.New()
 
-		resp, err := client.Do(req)
+		// 如果 proxy 不为空，设置代理
+		if proxy != "" {
+			client.SetProxy(proxy)
+		}
+
+		// 发起 GET 请求
+		resp, err := client.R().
+			SetHeader("User-Agent", "clash.meta").
+			Get(configPath)
+
 		if err != nil {
 			return nil, fmt.Errorf("HTTP GET failed: %v", err)
 		}
-		defer resp.Body.Close()
-		return io.ReadAll(resp.Body)
+
+		// 返回响应体
+		return resp.Body(), nil
 	}
+
+	// 如果 configPath 不是 HTTP URL，读取本地文件
 	return os.ReadFile(configPath)
 }
 

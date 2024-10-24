@@ -3,6 +3,7 @@ module github.com/0x10240/mihomo-speedtest
 go 1.20
 
 require (
+	github.com/go-resty/resty/v2 v2.15.3
 	github.com/metacubex/mihomo v1.18.8
 	github.com/olekukonko/tablewriter v0.0.5
 	gopkg.in/yaml.v3 v3.0.1
@@ -92,7 +93,7 @@ require (
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.24.0 // indirect
 	golang.org/x/text v0.17.0 // indirect
-	golang.org/x/time v0.5.0 // indirect
+	golang.org/x/time v0.6.0 // indirect
 	golang.org/x/tools v0.24.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 	lukechampine.com/blake3 v1.3.0 // indirect

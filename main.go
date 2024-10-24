@@ -22,7 +22,8 @@ var (
 	sortField          = flag.String("sort", "b", "Sort field: 'b' for bandwidth, 't' for latency")
 	outputFormat       = flag.String("output", "", "Output results to 'csv' or 'yaml' file")
 	concurrent         = flag.Int("concurrent", 4, "Number of concurrent downloads")
-	forwardProxy       = flag.String("proxy", "", "Forward proxy, supporting SOCKS5 and HTTP proxy.")
+	proxy              = flag.String("proxy", "", "proxy to get resource")
+	forwardProxy       = flag.String("forward-proxy", "", "Forward proxy, supporting SOCKS5 and HTTP proxy.")
 )
 
 func main() {
@@ -34,7 +35,7 @@ func main() {
 	}
 
 	// Load all proxies
-	allProxies := config.LoadAllProxies(*configPathConfig, *forwardProxy)
+	allProxies := config.LoadAllProxies(*configPathConfig, *proxy, *forwardProxy)
 	if len(allProxies) == 0 {
 		fmt.Fprintln(os.Stderr, "No proxies found, please check the configuration file")
 		os.Exit(1)
