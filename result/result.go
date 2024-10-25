@@ -12,12 +12,12 @@ import (
 )
 
 type Result struct {
-	Name       string
-	OutBoundIp string
-	Country    string
-	Bandwidth  float64
-	TTFB       time.Duration
-	Delay      uint16
+	Name       string        `json:"name" yaml:"name"`
+	OutBoundIp string        `json:"ip" yaml:"ip"`
+	Country    string        `json:"country" yaml:"country"`
+	Bandwidth  float64       `json:"bandwidth" yaml:"bandwidth"`
+	TTFB       time.Duration `json:"ttfb" yaml:"ttfb"`
+	Delay      uint16        `json:"delay" yaml:"delay"`
 }
 
 func (r *Result) Print() {

@@ -2,6 +2,7 @@ package output
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -11,15 +12,37 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func WriteResultsToFile(format string, results []result.Result, proxies map[string]config.CProxy) error {
+func WriteResultsToFile(format string, filePath string, results []result.Result, proxies map[string]config.CProxy) error {
 	switch format {
+	case "json":
+		return writeResultsToJson(filePath, results)
 	case "yaml":
-		return writeResultsToYAML("result.yaml", results, proxies)
+		return writeResultsToYAML(filePath, results, proxies)
 	case "csv":
-		return writeResultsToCSV("result.csv", results)
+		return writeResultsToCSV(filePath, results)
 	default:
-		return fmt.Errorf("Unsupported output format: %s", format)
+		return fmt.Errorf("Unsupported output: %v format: %s", filePath, format)
 	}
+}
+
+// writeResultsToJson writes a slice of Result structs to a JSON file at the specified file path.
+func writeResultsToJson(filePath string, results []result.Result) error {
+	// Create or overwrite the specified JSON file
+	file, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Convert the results to JSON format with indentation
+	data, err := json.MarshalIndent(results, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	// Write the JSON data to the file
+	_, err = file.Write(data)
+	return err
 }
 
 func writeResultsToYAML(filePath string, results []result.Result, proxies map[string]config.CProxy) error {

@@ -20,7 +20,8 @@ var (
 	downloadSizeConfig = flag.Int("size", 100, "Download size for testing (in MB)")
 	timeoutConfig      = flag.Duration("timeout", 5*time.Second, "Timeout duration for testing")
 	sortField          = flag.String("sort", "b", "Sort field: 'b' for bandwidth, 't' for latency")
-	outputFormat       = flag.String("output", "", "Output results to 'csv' or 'yaml' file")
+	outputFormat       = flag.String("w", "", "Output results to 'json' or 'csv' or 'yaml' file")
+	outputFile         = flag.String("o", "", "Test result output filepath")
 	concurrent         = flag.Int("concurrent", 4, "Number of concurrent downloads")
 	proxy              = flag.String("proxy", "", "proxy to get resource")
 	forwardProxy       = flag.String("forward-proxy", "", "Forward proxy, supporting SOCKS5 and HTTP proxy.")
@@ -52,25 +53,25 @@ func main() {
 
 	// Test proxies
 	var results []result.Result
+
 	if *delayTest {
 		results = tester.TestProxiesDelay(allProxies, *delayTestUrl, *timeoutConfig)
 		result.DisplayDelayResult(results)
-		return
+	} else {
+		results = tester.TestProxies(filteredProxies, allProxies, *downloadSizeConfig, *timeoutConfig, *concurrent, *livenessObject)
+
+		// Sort results
+		if *sortField != "" {
+			result.SortResults(results, *sortField)
+		}
+
+		// Display results
+		result.DisplayResults(results, *sortField)
 	}
-
-	results = tester.TestProxies(filteredProxies, allProxies, *downloadSizeConfig, *timeoutConfig, *concurrent, *livenessObject)
-
-	// Sort results
-	if *sortField != "" {
-		result.SortResults(results, *sortField)
-	}
-
-	// Display results
-	result.DisplayResults(results, *sortField)
 
 	// Output to file
 	if *outputFormat != "" {
-		if err := output.WriteResultsToFile(*outputFormat, results, allProxies); err != nil {
+		if err := output.WriteResultsToFile(*outputFormat, *outputFile, results, allProxies); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to write results to file: %v\n", err)
 			os.Exit(1)
 		}
